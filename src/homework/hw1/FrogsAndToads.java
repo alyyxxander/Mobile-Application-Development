@@ -3,66 +3,72 @@ package homework.hw1;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Stack;
 
 /**
  * Back end for the game of Frogs and Toads on a rectangular grid.
  *
  * @author Alyxander Claiborne
  * @since 8-24-2022
- * @version 2.1
+ * @version 3.0
  */
 
 public class FrogsAndToads {
 	
 	//====================================== VARIABLES
-	private final int DEFAULT_ROWS = 3;
-	private final int DEFAULT_COLUMNS = 3;
+	private static final int DEFAULT_ROWS = 5;
+	private static final int DEFAULT_COLUMNS = 5;
 	private int rows, columns;
 	private String[][] gameGrid;
 	private String[][] winningGameGrid;
+	private Stack<String[][]> gameHistory;
 	
-	String ansiBoldRed = "\u001B[1;31m";
-	String ansiBoldYellow = "\u001B[1;33m";
-	String ansiReset = "\u001B[0m";
-	String frog = ansiBoldRed + "F" + ansiReset;
-	String toad = ansiBoldYellow + "T" + ansiReset;
-	String emptySpace = "-";
-	ArrayList<int[]> allCells = new ArrayList<>();
-	ArrayList<int[]> legalMoves = new ArrayList<>();
+	private static final String ansiBoldRed = "\u001B[1;31m";
+	private static final String ansiBoldYellow = "\u001B[1;33m";
+	private static final String ansiReset = "\u001B[0m";
+	private static final String frog = ansiBoldRed + "F" + ansiReset;
+	private static final String toad = ansiBoldYellow + "T" + ansiReset;
+	private static final String emptySpace = "-";
+	private ArrayList<int[]> allCells = new ArrayList<>();
+	private ArrayList<int[]> legalMoves = new ArrayList<>();
 	
 	
 	//====================================== CONSTRUCTORS
+	/**
+	 * Creates a new game of the default size: 5x5
+	 */
 	public FrogsAndToads() {
-		// Creates a new game of default size
-		rows = DEFAULT_ROWS;
-		columns = DEFAULT_COLUMNS;
-		setUpGrid();
+		this(DEFAULT_ROWS, DEFAULT_COLUMNS);
 	}
-	
+
+	/**
+	 * Creates a new game on a square grid
+	 *
+	 * @param size The number of rows and columns of the grid, must be an odd number
+	 */
 	public FrogsAndToads(int size) {
-		// Creates a new game on a square grid.
-		if (size%2 != 0) {
-			System.out.println("There must be an odd number of rows & columns!");
-			this.rows = DEFAULT_ROWS;
-		} else {
-			this.rows = size;
-			this.columns = size;
-		}
-		setUpGrid();
+		this(size, size);
 	}
-	
+
+	/**
+	 * Creates a new game on a rectangular grid
+	 *
+	 * @param rows The number of rows to be in the grid, must be an odd number
+	 * @param columns The number of columns to be in the grid, must be an odd number
+	 */
 	public FrogsAndToads(int rows, int columns) {
-		// Creates a new game on a rectangular grid.
-		
-		if (rows%2 != 0) {
-			System.out.println("There must be an odd number of rows!");
+
+		if (rows%2 == 0) {
+			//There must be an odd number of rows. Since the user entered an even
+			// number, we'll use the default value instead
 			this.rows = DEFAULT_ROWS;
 		} else {
 			this.rows = rows;
 		}
 		
-		if (columns%2 != 0) {
-			System.out.println("There must be an odd number of columns!");
+		if (columns%2 == 0) {
+			//There must be an odd number of columns. Since the user entered an even
+			// number, we'll use the default value instead
 			this.columns = DEFAULT_COLUMNS;
 		} else {
 			this.columns = columns;
@@ -72,65 +78,87 @@ public class FrogsAndToads {
 	
 	
 	//====================================== METHODS
+	/**
+	 * @return Returns true if there is at least one legal move.
+	 */
 	public boolean canMove() {
-		// Returns true if there is at least one legal move.
 		return getLegalMoves().size() != 0;
 	}
-	
-	public boolean emptyAt(int i, int j) {
-		// Returns true if the empty space is at (i, j).
-		
-		//check if the coordinates are out of bounds
-		if ((i < 0) || (i >= gameGrid.length))
+
+	/**
+	 * Returns false if there is a frog or toad at the provided coordinates, or
+	 * if said coordinates are out of bounds
+	 *
+	 * @param row Row of the grid
+	 * @param col Column of the grid
+	 * @return Returns true if the empty space is at (i, j)
+	 */
+	public boolean emptyAt(int row, int col) {
+
+		//checking if the coordinates are out of bounds
+		if ((row < 0) || (row >= gameGrid.length))
 			return false;
-		if ((j < 0) || (j >= gameGrid[i].length))
+		if ((col < 0) || (col >= gameGrid[row].length))
 			return false;
 		
-		return gameGrid[i][j].equals(emptySpace);
+		return gameGrid[row][col].equals(emptySpace);
 	}
-	
-	public boolean frogAt(int i, int j) {
-		// Returns true if there is a frog at(i, j).
-		return gameGrid[i][j].equals(frog);
+
+	/**
+	 * @param row Row of the grid
+	 * @param col Column of the grid
+	 * @return Returns true if there is a frog at the specified coordinate
+	 */
+	public boolean frogAt(int row, int col) {
+		return gameGrid[row][col].equals(frog);
 	}
-	
+
+	/**
+	 * Loops through each cell of the grid and checks if that coordinate is a valid move
+	 *
+	 * @return Returns a List of legal moves from the current configuration
+	 */
 	public List<int[]> getLegalMoves() {
-		// Returns a list of legal moves from the current configuration.
-		
 		legalMoves.clear();
 		for (int[] cell : allCells) {
 		    if (canMove(cell[0], cell[1])) {
 				legalMoves.add(cell);
 			}
 		}
-		
 		return legalMoves;
 	}
-	
-	public void	move(int row, int col) {
-		// Makes a move at cell (row, col).
-		
+
+	/**
+	 * Makes a move at cell (row, col).
+	 * NOTE: toads can ONLY jump up or to the left, and frogs can ONLY jump down or to
+	 * the right, this is still true when one creature is jumping over another
+	 * @param row Row of the game grid
+	 * @param col Column of the game grid
+	 */
+	public void move(int row, int col) {
+
 		if (emptyAt(row, col)) {
-			System.out.println("No creature at this coordinate!");
+			//There is no creature at this coordinate
+			return;
+		} else if (!canMove(row, col)){
+			//User did not select a valid move
+			return;
 		} else if (toadAt(row, col)) {
 			//NOTE: toads can ONLY jump up or to the left
 			
 			//see if the toad can jump up
 			if (emptyAt(row-1, col)) {
-				System.out.println("TOAD MOVED UP");
 				gameGrid[row-1][col] = toad;
 				gameGrid[row][col] = emptySpace;
 			}
 			//see if the toad can jump to the left
 			else if (emptyAt(row, col-1)) {
-				System.out.println("TOAD MOVED LEFT");
 				gameGrid[row][col-1] = toad;
 				gameGrid[row][col] = emptySpace;
 			}
 			//see if the toad can jump up and over a frog into the empty space
 			else if (emptyAt(row-2, col)) {
 				if (frogAt(row-1, col)) {
-					System.out.println("TOAD JUMPED UP AND OVER FROG");
 					gameGrid[row-2][col] = toad;
 					gameGrid[row][col] = emptySpace;
 				}
@@ -138,7 +166,6 @@ public class FrogsAndToads {
 			//see if the toad can jump left and over a frog into the empty space
 			else if (emptyAt(row, col-2)) {
 				if (frogAt(row, col-1)) {
-					System.out.println("TOAD JUMPED LEFT AND OVER FROG");
 					gameGrid[row][col-2] = toad;
 					gameGrid[row][col] = emptySpace;
 				}
@@ -149,20 +176,17 @@ public class FrogsAndToads {
 			
 			//see if the frog can jump down
 			if (emptyAt(row+1, col)) {
-				System.out.println("FROG MOVED DOWN");
 				gameGrid[row+1][col] = frog;
 				gameGrid[row][col] = emptySpace;
 			}
 			//see if the frog can jump to the right
 			else if (emptyAt(row, col+1)) {
-				System.out.println("FROG MOVED RIGHT");
 				gameGrid[row][col+1] = frog;
 				gameGrid[row][col] = emptySpace;
 			}
 			//see if the frog can down up and over a toad into the empty space
 			else if (emptyAt(row+2, col)) {
 				if (toadAt(row+1, col)) {
-					System.out.println("FROG JUMPED DOWN AND OVER TOAD");
 					gameGrid[row+2][col] = frog;
 					gameGrid[row][col] = emptySpace;
 				}
@@ -170,48 +194,78 @@ public class FrogsAndToads {
 			//see if the frog can jump right and over a toad into the empty space
 			else if (emptyAt(row, col+2)) {
 				if (toadAt(row, col+1)) {
-					System.out.println("FROG JUMPED RIGHT AND OVER TOAD");
 					gameGrid[row][col+2] = frog;
 					gameGrid[row][col] = emptySpace;
 				}
 			}
 		}
+		gameHistory.push(copyGrid(gameGrid));
 	}
-	
+
+	/**
+	 * @return Returns true if the positions of the frogs and toads in the starting
+	 * configuration have been interchanged (game over)
+	 */
 	public boolean over() {
-		// Returns true if the positions of the frogs and toads in
-		// the starting configuration have been interchanged (gameover).
-		
 		return equalGrids(gameGrid, winningGameGrid);
 	}
-	
-	public boolean toadAt(int i, int j) {
-		// Returns true if there is a toad at(i, j).
-		return gameGrid[i][j].equals(toad);
+
+	/**
+	 * @param row Row of the game grid
+	 * @param col Column of the game grid
+	 * @return Returns true if there is a toad at (row, col)
+	 */
+	public boolean toadAt(int row, int col) {
+		return gameGrid[row][col].equals(toad);
 	}
-	
+
+	/**
+	 * @return Returns the current game state with row and column headers
+	 */
 	public String toString() {
-		// Returns the current game state with row and column headers.
-		return Arrays.deepToString(gameGrid)
-				.replace("], ", "]\n")
-				.replace("[[", "[")
-				.replace("]]", "]")
-				.replace(",", "");
+		//adding the column indices
+		StringBuilder sb = new StringBuilder("  ");
+		for (int col = 0; col < gameGrid[0].length; col++) {
+			sb.append(col + " ");
+		}
+		sb.append("\n");
+
+		for (int row = 0; row < gameGrid.length; row++) {
+			sb.append(row + "|"); //this line adds the row indices
+
+			for (int col = 0; col < gameGrid[row].length; col++) {
+				sb.append(gameGrid[row][col] + " ");
+			}
+			sb.append("\n");
+		}
+		return sb.toString();
 	}
-	
-	//TODO: write undo() method
+
+	/**
+	 * Undoes the most recent move by setting the game grid equal to the previous
+	 * version of itself
+	 */
 	public void undo() {
-		// Undoes the most recent move.
+		if (gameHistory.size() == 1) {
+			// Cannot undo any further
+			return;
+		}
+		gameHistory.pop();
+		gameGrid = gameHistory.peek();
 	}
 	
 	
 	//====================================== OTHER ADDED METHODS
-	public void setUpGrid() {
+	/**
+	 * Creates a 2D array using the size specified in the FrogsAndToads constructor
+	 */
+	private void setUpGrid() {
 		gameGrid = new String[rows][columns];
-		int middleRow = (int) Math.floor((double) rows/2);
-		int middleColumn = (int) Math.floor((double) columns/2);
 		
-		//i feel like there's a better way to do this
+		int middleRow = rows/2;
+		int middleColumn = columns/2;
+		
+		//Place frogs and toads on the board
 		for (int i = 0; i < gameGrid.length; i++) {
 			for (int j = 0; j < gameGrid[i].length; j++) {
 				
@@ -233,23 +287,33 @@ public class FrogsAndToads {
 		
 		//we want to keep the box in the center of the grid empty
 		gameGrid[middleRow][middleColumn] = emptySpace;
+
+		//begin keeping a history of the game grid
+		gameHistory = new Stack<>();
+		gameHistory.add(copyGrid(gameGrid));
 		
 		setWinningGameGrid(gameGrid);
 	}
-	
-	public void setWinningGameGrid(String[][] gameGrid) {
+
+	/**
+	 * Creates a copy of the starting game grid, but with all toads and frogs
+	 * in opposite positions
+	 *
+	 * @param gameGrid The original game grid before any moves have been made by the
+	 *                    player
+	 */
+	private void setWinningGameGrid(String[][] gameGrid) {
+
 		winningGameGrid = copyGrid(gameGrid);
 		
 		// replace all values in the grid with temporary ones
 		for (int i = 0; i < winningGameGrid.length; i++) {
 			for (int j = 0; j < winningGameGrid[i].length; j++) {
-				
 				if (winningGameGrid[i][j].equals(frog)) {
 					winningGameGrid[i][j] = "tempFrog";
 				} else if (winningGameGrid[i][j].equals(toad)) {
 					winningGameGrid[i][j] = "tempToad";
 				}
-				
 			}
 		}
 		
@@ -265,10 +329,16 @@ public class FrogsAndToads {
 				}
 			}
 		}
-		
 	}
-	
-	public static String[][] copyGrid(String[][] grid) {
+
+	/**
+	 * Uses a for-loop to iterate over each row of the original array and then calls
+	 * the clone() method to copy each row
+	 *
+	 * @param grid The 2D array to be copied
+	 * @return Returns a copy of the provided grid
+	 */
+	private static String[][] copyGrid(String[][] grid) {
 		// this method is based off of the first block of code from https://bit.ly/3dZZ9Px
 		
 		if (grid == null)
@@ -281,8 +351,15 @@ public class FrogsAndToads {
 		
 		return copy;
 	}
-	
-	public boolean equalGrids(String[][] arr1, String[][] arr2) {
+
+	/**
+	 * Compares each index of the 2D arrays that are passed to the method
+	 *
+	 * @param arr1 The first 2D array being compared
+	 * @param arr2 The second 2D array being compared
+	 * @return Returns true if the two provided grids are equal
+	 */
+	private static boolean equalGrids(String[][] arr1, String[][] arr2) {
 		// this method is based off: https://bit.ly/3dZZ9Px
 		if (arr1 == null)
 			return (arr2 == null);
@@ -300,8 +377,17 @@ public class FrogsAndToads {
 		
 		return true;
 	}
-	
-	public boolean canMove(int row, int col) {
+
+	/**
+	 * Checks if the creature at the specified coordinate is able to make a valid move
+	 *
+	 * @param row row of the grid
+	 * @param col column of the grid
+	 * @return Returns true if the creature at the specified coordinate is able to make
+	 * a valid move
+	 */
+	private boolean canMove(int row, int col) {
+
 		if (emptyAt(row, col)) {
 			return false;
 		} else if (toadAt(row, col)) {
@@ -344,9 +430,7 @@ public class FrogsAndToads {
 				return toadAt(row, col + 1);
 			}
 		}
-		
 		return false;
 	}
-	
-	
+
 }
