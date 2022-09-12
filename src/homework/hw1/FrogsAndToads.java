@@ -10,7 +10,7 @@ import java.util.Stack;
  *
  * @author Alyxander Claiborne
  * @since 8-24-2022
- * @version 3.0
+ * @version 3.1
  */
 
 public class FrogsAndToads {
@@ -19,9 +19,9 @@ public class FrogsAndToads {
 	private static final int DEFAULT_ROWS = 5;
 	private static final int DEFAULT_COLUMNS = 5;
 	private int rows, columns;
-	private String[][] gameGrid;
-	private String[][] winningGameGrid;
-	private Stack<String[][]> gameHistory;
+	private char[][] gameGrid;
+	private char[][] winningGameGrid;
+	private Stack<char[][]> gameHistory;
 	
 	private static final String ansiBoldRed = "\u001B[1;31m";
 	private static final String ansiBoldYellow = "\u001B[1;33m";
@@ -101,7 +101,7 @@ public class FrogsAndToads {
 		if ((col < 0) || (col >= gameGrid[row].length))
 			return false;
 		
-		return gameGrid[row][col].equals(emptySpace);
+		return gameGrid[row][col] == 'E';
 	}
 
 	/**
@@ -110,7 +110,7 @@ public class FrogsAndToads {
 	 * @return Returns true if there is a frog at the specified coordinate
 	 */
 	public boolean frogAt(int row, int col) {
-		return gameGrid[row][col].equals(frog);
+		return gameGrid[row][col] == 'F';
 	}
 
 	/**
@@ -148,26 +148,26 @@ public class FrogsAndToads {
 			
 			//see if the toad can jump up
 			if (emptyAt(row-1, col)) {
-				gameGrid[row-1][col] = toad;
-				gameGrid[row][col] = emptySpace;
+				gameGrid[row-1][col] = 'T';
+				gameGrid[row][col] = 'E';
 			}
 			//see if the toad can jump to the left
 			else if (emptyAt(row, col-1)) {
-				gameGrid[row][col-1] = toad;
-				gameGrid[row][col] = emptySpace;
+				gameGrid[row][col-1] = 'T';
+				gameGrid[row][col] = 'E';
 			}
 			//see if the toad can jump up and over a frog into the empty space
 			else if (emptyAt(row-2, col)) {
 				if (frogAt(row-1, col)) {
-					gameGrid[row-2][col] = toad;
-					gameGrid[row][col] = emptySpace;
+					gameGrid[row-2][col] = 'T';
+					gameGrid[row][col] = 'E';
 				}
 			}
 			//see if the toad can jump left and over a frog into the empty space
 			else if (emptyAt(row, col-2)) {
 				if (frogAt(row, col-1)) {
-					gameGrid[row][col-2] = toad;
-					gameGrid[row][col] = emptySpace;
+					gameGrid[row][col-2] = 'T';
+					gameGrid[row][col] = 'E';
 				}
 			}
 			
@@ -176,26 +176,26 @@ public class FrogsAndToads {
 			
 			//see if the frog can jump down
 			if (emptyAt(row+1, col)) {
-				gameGrid[row+1][col] = frog;
-				gameGrid[row][col] = emptySpace;
+				gameGrid[row+1][col] = 'F';
+				gameGrid[row][col] = 'E';
 			}
 			//see if the frog can jump to the right
 			else if (emptyAt(row, col+1)) {
-				gameGrid[row][col+1] = frog;
-				gameGrid[row][col] = emptySpace;
+				gameGrid[row][col+1] = 'F';
+				gameGrid[row][col] = 'E';
 			}
 			//see if the frog can down up and over a toad into the empty space
 			else if (emptyAt(row+2, col)) {
 				if (toadAt(row+1, col)) {
-					gameGrid[row+2][col] = frog;
-					gameGrid[row][col] = emptySpace;
+					gameGrid[row+2][col] = 'F';
+					gameGrid[row][col] = 'E';
 				}
 			}
 			//see if the frog can jump right and over a toad into the empty space
 			else if (emptyAt(row, col+2)) {
 				if (toadAt(row, col+1)) {
-					gameGrid[row][col+2] = frog;
-					gameGrid[row][col] = emptySpace;
+					gameGrid[row][col+2] = 'F';
+					gameGrid[row][col] = 'E';
 				}
 			}
 		}
@@ -216,25 +216,43 @@ public class FrogsAndToads {
 	 * @return Returns true if there is a toad at (row, col)
 	 */
 	public boolean toadAt(int row, int col) {
-		return gameGrid[row][col].equals(toad);
+		return gameGrid[row][col] == 'T';
 	}
 
 	/**
 	 * @return Returns the current game state with row and column headers
 	 */
 	public String toString() {
+
+		String[][] stringGameGrid = new String[rows][columns];
+		for (int i = 0; i < gameGrid.length; i++) {
+			for (int j = 0; j < gameGrid[i].length; j++) {
+
+				// place frogs
+				if (gameGrid[i][j] == 'F') {
+					stringGameGrid[i][j] = frog;
+				} // place toads
+				else if (gameGrid[i][j] == 'T') {
+					stringGameGrid[i][j] = toad;
+				} // place empty space
+				else if (gameGrid[i][j] == 'E') {
+					stringGameGrid[i][j] = emptySpace;
+				}
+			}
+		}
+
 		//adding the column indices
 		StringBuilder sb = new StringBuilder("  ");
-		for (int col = 0; col < gameGrid[0].length; col++) {
+		for (int col = 0; col < stringGameGrid[0].length; col++) {
 			sb.append(col + " ");
 		}
 		sb.append("\n");
 
-		for (int row = 0; row < gameGrid.length; row++) {
+		for (int row = 0; row < stringGameGrid.length; row++) {
 			sb.append(row + "|"); //this line adds the row indices
 
 			for (int col = 0; col < gameGrid[row].length; col++) {
-				sb.append(gameGrid[row][col] + " ");
+				sb.append(stringGameGrid[row][col] + " ");
 			}
 			sb.append("\n");
 		}
@@ -260,7 +278,7 @@ public class FrogsAndToads {
 	 * Creates a 2D array using the size specified in the FrogsAndToads constructor
 	 */
 	private void setUpGrid() {
-		gameGrid = new String[rows][columns];
+		gameGrid = new char[rows][columns];
 		
 		int middleRow = rows/2;
 		int middleColumn = columns/2;
@@ -273,20 +291,20 @@ public class FrogsAndToads {
 				allCells.add(new int[] {i, j});
 				
 				if (i < middleRow)  {
-					gameGrid[i][j] = frog;
+					gameGrid[i][j] = 'F';
 				} else if (i == middleRow) {
 					if (j < middleColumn)
-						gameGrid[i][j] = frog;
+						gameGrid[i][j] = 'F';
 					else
-						gameGrid[i][j] = toad;
+						gameGrid[i][j] = 'T';
 				} else {
-					gameGrid[i][j] = toad;
+					gameGrid[i][j] = 'T';
 				}
 			}
 		}
 		
 		//we want to keep the box in the center of the grid empty
-		gameGrid[middleRow][middleColumn] = emptySpace;
+		gameGrid[middleRow][middleColumn] = 'E';
 
 		//begin keeping a history of the game grid
 		gameHistory = new Stack<>();
@@ -302,17 +320,17 @@ public class FrogsAndToads {
 	 * @param gameGrid The original game grid before any moves have been made by the
 	 *                    player
 	 */
-	private void setWinningGameGrid(String[][] gameGrid) {
+	private void setWinningGameGrid(char[][] gameGrid) {
 
 		winningGameGrid = copyGrid(gameGrid);
 		
 		// replace all values in the grid with temporary ones
 		for (int i = 0; i < winningGameGrid.length; i++) {
 			for (int j = 0; j < winningGameGrid[i].length; j++) {
-				if (winningGameGrid[i][j].equals(frog)) {
-					winningGameGrid[i][j] = "tempFrog";
-				} else if (winningGameGrid[i][j].equals(toad)) {
-					winningGameGrid[i][j] = "tempToad";
+				if (winningGameGrid[i][j] == 'F') {
+					winningGameGrid[i][j] = 'f';
+				} else if (winningGameGrid[i][j] == 'T') {
+					winningGameGrid[i][j] = 't';
 				}
 			}
 		}
@@ -321,11 +339,11 @@ public class FrogsAndToads {
 			for (int j = 0; j < winningGameGrid[i].length; j++) {
 				
 				// place toads where the frogs were
-				if (winningGameGrid[i][j].equals("tempFrog")) {
-					winningGameGrid[i][j] = toad;
+				if (winningGameGrid[i][j] == 'f') {
+					winningGameGrid[i][j] = 'T';
 				} // place frogs where the toads were
-				else if (winningGameGrid[i][j].equals("tempToad")) {
-					winningGameGrid[i][j] = frog;
+				else if (winningGameGrid[i][j] == 't') {
+					winningGameGrid[i][j] = 'F';
 				}
 			}
 		}
@@ -338,13 +356,14 @@ public class FrogsAndToads {
 	 * @param grid The 2D array to be copied
 	 * @return Returns a copy of the provided grid
 	 */
-	private static String[][] copyGrid(String[][] grid) {
+	private static char[][] copyGrid(char[][] grid) {
 		// this method is based off of the first block of code from https://bit.ly/3dZZ9Px
 		
 		if (grid == null)
 			return null;
 		
-		String[][] copy = new String[grid.length][];
+		char[][] copy = new char[grid.length][];
+
 		for (int i = 0; i < grid.length; i++) {
 			copy[i] = grid[i].clone();
 		}
@@ -359,7 +378,7 @@ public class FrogsAndToads {
 	 * @param arr2 The second 2D array being compared
 	 * @return Returns true if the two provided grids are equal
 	 */
-	private static boolean equalGrids(String[][] arr1, String[][] arr2) {
+	private static boolean equalGrids(char[][] arr1, char[][] arr2) {
 		// this method is based off: https://bit.ly/3dZZ9Px
 		if (arr1 == null)
 			return (arr2 == null);
